@@ -1,1 +1,3 @@
-streamlit
+streamlit==1.54.0
+earthengine-api==1.7.10
+folium==0.20.0
