@@ -64,14 +64,14 @@ BASEMAPS = {
 project = "projects/ee-pigee/assets"
 
 layers = {
-    "Limite": get_tile_url("projects/ee-rogergodoytest/assets/limite_municipal", "000000"),
-    "APA": get_tile_url(f"{project}/UnidadesConservacaoCampinas", "3AF40B"),
-    "APP": get_tile_url(f"{project}/areaPreservacaoPermanente", "f1fc07"),
-    "Amortecimento": get_tile_url(f"{project}/zonasAmortecimento", "f50618"),
-    "Nascentes": get_tile_url(f"{project}/nascentes_campinas", "13f2f9", is_point=True),
-    "Hidrografia": get_tile_url(f"{project}/hidrografia_campinas", "031fbb"),
-    "HIDS": get_tile_url(f"{project}/hids", "fa9e09"),
-    "PIDS": get_tile_url(f"{project}/hids_pids", "d488de"),
+    "Limite": {"url": get_tile_url("projects/ee-rogergodoytest/assets/limite_municipal", "000000"), "color": "#000000"},
+    "APA": {"url": get_tile_url(f"{project}/UnidadesConservacaoCampinas", "3AF40B"), "color": "#3AF40B"},
+    "APP": {"url": get_tile_url(f"{project}/areaPreservacaoPermanente", "f1fc07"), "color": "#f1fc07"},
+    "Amortecimento": {"url": get_tile_url(f"{project}/zonasAmortecimento", "f50618"), "color": "#f50618"},
+    "Nascentes": {"url": get_tile_url(f"{project}/nascentes_campinas", "13f2f9", is_point=True), "color": "#13f2f9"},
+    "Hidrografia": {"url": get_tile_url(f"{project}/hidrografia_campinas", "031fbb"), "color": "#031fbb"},
+    "HIDS": {"url": get_tile_url(f"{project}/hids", "fa9e09"), "color": "#fa9e09"},
+    "PIDS": {"url": get_tile_url(f"{project}/hids_pids", "d488de"), "color": "#d488de"},
 }
 
 # ---------------------------
@@ -113,7 +113,7 @@ else:
 
 # Camadas
 for name in selected_layers:
-    url = layers[name]
+    url = layers[name]["url"]
     if url:
         folium.TileLayer(
             tiles=url,
@@ -121,8 +121,58 @@ for name in selected_layers:
             name=name,
             overlay=True
         ).add_to(m)
+from branca.element import Template, MacroElement
+
+def add_legend(map_obj, selected_layers, layers_dict):
+    legend_items = ""
+
+    for layer in selected_layers:
+        color = layers_dict[layer]["color"]
+        legend_items += f"""
+        <li><span style='background:{color}'></span>{layer}</li>
+        """
+
+    template = f"""
+    {{% macro html(this, kwargs) %}}
+
+    <div style="
+        position: fixed; 
+        bottom: 40px; left: 40px; width: 220px;
+        background-color: white;
+        border:2px solid grey;
+        z-index:9999;
+        font-size:14px;
+        padding: 10px;
+        border-radius: 8px;
+        ">
+        
+        <b>Legenda</b>
+        <ul style="list-style: none; padding: 0;">
+            {legend_items}
+        </ul>
+    </div>
+
+    <style>
+        li {{
+            margin-bottom: 5px;
+        }}
+        span {{
+            display:inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 8px;
+        }}
+    </style>
+
+    {{% endmacro %}}
+    """
+
+    macro = MacroElement()
+    macro._template = Template(template)
+    map_obj.get_root().add_child(macro)
 
 folium.LayerControl().add_to(m)
+add_legend(m, selected_layers, layers)
 
 # Render (FIXED)
 st_folium(m, width=1200, height=600)
