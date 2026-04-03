@@ -20,7 +20,7 @@ def init_gee():
 
     credentials = ee.ServiceAccountCredentials(
         creds_dict["client_email"],
-        key_data=json.dumps(creds_dict)
+        key_data=creds_dict("private_key")
     )
 
     ee.Initialize(credentials, project="ee-passeionamatamapas")
