@@ -22,7 +22,7 @@ def init_gee():
         key_data=json.dumps(creds_dict)
     )
 
-    ee.Initialize(credentials)
+    ee.Initialize(credentials, project="ee-passeionamatamapas")
 
 init_gee()
 # ---------------------------
