@@ -15,14 +15,16 @@ logging.basicConfig(level=logging.INFO)
 # ---------------------------
 @st.cache_resource
 def init_gee():
-    try:
-        ee.Initialize(project="ee-passeionamatamapas")
-        logging.info("GEE inicializado com sucesso!")
-    except Exception as e:
-        logging.error(f"Erro no GEE: {e}")
+    creds_dict = st.secrets["ee"]
+
+    credentials = ee.ServiceAccountCredentials(
+        creds_dict["client_email"],
+        key_data=json.dumps(creds_dict)
+    )
+
+    ee.Initialize(credentials)
 
 init_gee()
-
 # ---------------------------
 # Função (igual à sua)
 # ---------------------------
