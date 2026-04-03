@@ -2,38 +2,39 @@ import streamlit as st
 import ee
 import folium
 import logging
-import json
-from streamlit.components.v1 import html
+from streamlit_folium import st_folium
 
 # ---------------------------
-# Configuração
+# CONFIG
 # ---------------------------
 st.set_page_config(layout="wide")
 logging.basicConfig(level=logging.INFO)
 
 # ---------------------------
-# Inicializar GEE
+# INIT GEE (FIXED)
 # ---------------------------
 @st.cache_resource
 def init_gee():
-    creds_dict = st.secrets["ee"]
+    creds = st.secrets["ee"]
+
+    private_key = creds["private_key"].replace("\\n", "\n")
 
     credentials = ee.ServiceAccountCredentials(
-        creds_dict["client_email"],
-        key_data = creds_dict["private_key"]
+        creds["client_email"],
+        key_data=private_key
     )
 
-    ee.Initialize(credentials, project="ee-passeionamatamapas")
+    ee.Initialize(credentials, project=creds["ee-passeionamatamapas"])
 
 init_gee()
+
 # ---------------------------
-# Função (igual à sua)
+# TILE FUNCTION (CACHE)
 # ---------------------------
+@st.cache_data
 def get_tile_url(asset_id, palette, is_point=False):
     try:
         fc = ee.FeatureCollection(asset_id)
-        count = fc.size().getInfo()
-        logging.info(f"{asset_id} -> {count} elementos")
 
         if is_point:
             image = ee.Image().paint(fc.map(lambda f: f.buffer(15)), 0)
@@ -48,7 +49,17 @@ def get_tile_url(asset_id, palette, is_point=False):
         return None
 
 # ---------------------------
-# Camadas
+# BASEMAPS
+# ---------------------------
+BASEMAPS = {
+    "OpenStreetMap": "OpenStreetMap",
+    "Satélite (Esri)": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "CartoDB Positron": "CartoDB positron",
+    "CartoDB Dark": "CartoDB dark_matter",
+}
+
+# ---------------------------
+# LAYERS
 # ---------------------------
 project = "projects/ee-pigee/assets"
 
@@ -60,26 +71,47 @@ layers = {
     "Nascentes": get_tile_url(f"{project}/nascentes_campinas", "13f2f9", is_point=True),
     "Hidrografia": get_tile_url(f"{project}/hidrografia_campinas", "031fbb"),
     "HIDS": get_tile_url(f"{project}/hids", "fa9e09"),
-    "PIDS": get_tile_url(f"{project}/hids_pids", "d488de")
+    "PIDS": get_tile_url(f"{project}/hids_pids", "d488de"),
 }
 
 # ---------------------------
-# Interface
+# UI
 # ---------------------------
 st.title("🌎 Mapa Ambiental - Campinas")
 
-# Sidebar para controle de camadas
-st.sidebar.header("Camadas")
-selected_layers = []
-for name in layers:
-    if st.sidebar.checkbox(name, value=True):
-        selected_layers.append(name)
+# Sidebar
+st.sidebar.header("🗺️ Configurações")
+
+basemap_choice = st.sidebar.selectbox("Mapa base", list(BASEMAPS.keys()))
+
+selected_layers = [
+    name for name in layers
+    if st.sidebar.checkbox(name, value=True)
+]
 
 # ---------------------------
-# Mapa Folium
+# MAPA
 # ---------------------------
-m = folium.Map(location=[-22.9, -47.06], zoom_start=11)
+m = folium.Map(
+    location=[-22.9, -47.06],
+    zoom_start=11,
+    tiles=None
+)
 
+# Basemap
+basemap = BASEMAPS[basemap_choice]
+
+if basemap.startswith("http"):
+    folium.TileLayer(
+        tiles=basemap,
+        attr=basemap_choice,
+        name="Base",
+        overlay=False
+    ).add_to(m)
+else:
+    folium.TileLayer(basemap, name="Base").add_to(m)
+
+# Camadas
 for name in selected_layers:
     url = layers[name]
     if url:
@@ -92,7 +124,27 @@ for name in selected_layers:
 
 folium.LayerControl().add_to(m)
 
+# Render (FIXED)
+st_folium(m, width=1200, height=600)
+
 # ---------------------------
-# Renderizar no Streamlit
+# EXPORT GEO TIFF
 # ---------------------------
-html(m._repr_html_(), height=600)
+st.sidebar.header("⬇️ Exportar")
+
+if st.sidebar.button("Exportar Hidrografia GeoTIFF"):
+    try:
+        fc = ee.FeatureCollection(f"{project}/hidrografia_campinas")
+        image = ee.Image().paint(fc, 1)
+
+        url = image.getDownloadURL({
+            'scale': 30,
+            'crs': 'EPSG:4326',
+            'format': 'GeoTIFF'
+        })
+
+        st.sidebar.success("Link gerado!")
+        st.sidebar.markdown(f"[Download GeoTIFF]({url})")
+
+    except Exception as e:
+        st.sidebar.error(f"Erro: {e}")
