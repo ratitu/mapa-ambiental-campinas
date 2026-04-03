@@ -24,7 +24,7 @@ def init_gee():
         key_data=private_key
     )
 
-    ee.Initialize(credentials, project=creds["ee-passeionamatamapas"])
+    ee.Initialize(credentials, project=creds["project_id"])
 
 init_gee()
 
