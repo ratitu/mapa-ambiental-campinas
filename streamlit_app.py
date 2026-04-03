@@ -121,6 +121,8 @@ for name in selected_layers:
             name=name,
             overlay=True
         ).add_to(m)
+
+# LEGENDA
 from branca.element import Template, MacroElement
 
 def add_legend(map_obj, selected_layers, layers_dict):
@@ -138,7 +140,7 @@ def add_legend(map_obj, selected_layers, layers_dict):
     <div style="
         position: fixed; 
         bottom: 40px; left: 40px; width: 220px;
-        background-color: white;
+        background-color: black;
         border:2px solid grey;
         z-index:9999;
         font-size:14px;
