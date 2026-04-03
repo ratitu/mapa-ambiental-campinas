@@ -2,6 +2,7 @@ import streamlit as st
 import ee
 import folium
 import logging
+import json
 from streamlit.components.v1 import html
 
 # ---------------------------
